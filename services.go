@@ -2,7 +2,7 @@ package render
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -12,7 +12,7 @@ type Service struct {
 	Type         string    `json:"type"`
 	Repo         string    `json:"repo"`
 	Name         string    `json:"name"`
-	AutoDeploy   string    `json:"autoDeploy"`
+	AutoDeploy   bool      `json:"autoDeploy"`
 	Branch       string    `json:"branch"`
 	CreatedAt    time.Time `json:"createdAt"`
 	NotifyOnFail string    `json:"notifyOnFail"`
@@ -53,25 +53,33 @@ type ListServicesResponseBody []struct {
 //
 // https://api-docs.render.com/reference/get-services
 func (s *Services) List(ctx context.Context) ([]Service, error) {
-	req, err := s.client.NewRequest(ctx, http.MethodGet, "/services", nil)
+	resp, err := s.client.c.ListServicesWithResponse(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := s.client.DoRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	respBody := ListServicesResponseBody{}
-	if err = json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
-		return nil, err
+	if resp.StatusCode() != http.StatusOK || resp.JSON200 == nil {
+		return nil, fmt.Errorf("failed to retrieve services: %d %s", resp.StatusCode(), string(resp.Body))
 	}
 
-	services := make([]Service, 0, len(respBody))
-	for _, item := range respBody {
-		services = append(services, item.Service)
+	services := make([]Service, 0, len(*resp.JSON200))
+	for _, service := range *resp.JSON200 {
+		services = append(services, Service{
+			ID:             service.Service.Id,
+			Type:           "",
+			Repo:           service.Service.Repo,
+			Name:           service.Service.Name,
+			AutoDeploy:     service.Service.AutoDeploy == "yes",
+			Branch:         service.Service.Branch,
+			CreatedAt:      service.Service.CreatedAt,
+			NotifyOnFail:   "",
+			OwnerID:        "",
+			Slug:           "",
+			Suspended:      "",
+			Suspenders:     nil,
+			UpdatedAt:      service.Service.UpdatedAt,
+			ServiceDetails: ServiceDetails{},
+		})
 	}
 
 	return services, nil
@@ -81,21 +89,31 @@ func (s *Services) List(ctx context.Context) ([]Service, error) {
 //
 // https://api-docs.render.com/reference/get-service
 func (s *Services) Retrieve(ctx context.Context, serviceID string) (*Service, error) {
-	req, err := s.client.NewRequest(ctx, http.MethodGet, "/services/"+serviceID, nil)
+	resp, err := s.client.c.GetServiceWithResponse(ctx, serviceID)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := s.client.DoRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	service := &Service{}
-	if err = json.NewDecoder(resp.Body).Decode(service); err != nil {
-		return nil, err
+	if resp.StatusCode() != http.StatusOK || resp.JSON200 == nil {
+		return nil, fmt.Errorf("failed to get service %s: %d %s", serviceID, resp.StatusCode(), string(resp.Body))
 	}
 
-	return service, nil
+	service := *resp.JSON200
+
+	return &Service{
+		ID:             service.Id,
+		Type:           "",
+		Repo:           service.Repo,
+		Name:           service.Name,
+		AutoDeploy:     service.AutoDeploy == "yes",
+		Branch:         service.Branch,
+		CreatedAt:      service.CreatedAt,
+		NotifyOnFail:   "",
+		OwnerID:        "",
+		Slug:           "",
+		Suspended:      "",
+		Suspenders:     nil,
+		UpdatedAt:      service.UpdatedAt,
+		ServiceDetails: ServiceDetails{},
+	}, nil
 }

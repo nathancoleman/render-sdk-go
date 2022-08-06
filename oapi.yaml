@@ -1,0 +1,89 @@
+openapi: 3.1.0
+info:
+  title: Render
+  version: '1.0'
+servers:
+  - url: 'https://api.render.com/v1'
+paths:
+  /services:
+    get:
+      summary: listServices
+      operationId: list-services
+      tags:
+        - Services
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    service:
+                      $ref: '#/components/schemas/Service'
+                  required:
+                    - service
+
+  /services/{serviceId}:
+    get:
+      summary: getService
+      operationId: get-service
+      tags:
+        - Services
+      parameters:
+        - in: path
+          name: serviceId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+components:
+  schemas:
+    Service:
+      title: Service
+      type: object
+      properties:
+        id:
+          type: string
+          example: abc123
+        name:
+          type: string
+          example: Web App
+        slug:
+          type: string
+          example: web-app
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        autoDeploy:
+          type: string
+          example: yes
+        repo:
+          type: string
+        branch:
+          type: string
+      required:
+        - id
+        - name
+        - slug
+        - createdAt
+        - updatedAt
+        - autoDeploy
+        - repo
+        - branch
+  securitySchemes:
+    apiKey:
+      name: API Key
+      type: apiKey
+      in: header

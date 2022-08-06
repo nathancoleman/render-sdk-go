@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	apigen "github.com/nathancoleman/render-sdk-go/gen"
 )
 
 const (
@@ -25,6 +27,7 @@ type Config struct {
 
 type Client struct {
 	cfg *Config
+	c   apigen.ClientWithResponsesInterface
 }
 
 func DefaultConfig() *Config {
@@ -42,7 +45,16 @@ func DefaultConfig() *Config {
 }
 
 func NewClient(cfg *Config) (*Client, error) {
-	return &Client{cfg: cfg}, nil
+	c, err := apigen.NewClientWithResponses(
+		"https://api.render.com/"+cfg.APIVersion,
+		apigen.WithRequestEditorFn(func(_ context.Context, req *http.Request) error {
+			req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+			return nil
+		}))
+	if err != nil {
+		return nil, err
+	}
+	return &Client{cfg: cfg, c: c}, nil
 }
 
 func (c *Client) NewRequest(ctx context.Context, method, path string, body io.Reader) (*http.Request, error) {
