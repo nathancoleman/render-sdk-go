@@ -45,8 +45,105 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Service'
+
+  /services/{serviceId}/deploys:
+    get:
+      summary: listDeploys
+      operationId: list-deploys
+      tags:
+        - Deploys
+      parameters:
+        - in: path
+          name: serviceId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    deploy:
+                      $ref: '#/components/schemas/Deploy'
+                  required:
+                    - deploy
+
+  /services/{serviceId}/deploys/{deployId}:
+    get:
+      summary: getDeploy
+      operationId: get-deploy
+      tags:
+        - Deploys
+      parameters:
+        - in: path
+          name: serviceId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: deployId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deploy'
+
 components:
   schemas:
+    Deploy:
+      title: Deploy
+      type: object
+      properties:
+        id:
+          type: string
+          example: abc123
+        commit:
+          type: object
+          properties:
+            id:
+              type: string
+            message:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+          required:
+            - id
+            - message
+            - createdAt
+        status:
+          type: string
+          enum:
+            - created
+            - build_in_progress
+            - update_in_progress
+            - live
+            - deactivated
+            - build_failed
+            - update_failed
+            - canceled
+          example: "created"
+        createdAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
     Service:
       title: Service
       type: object

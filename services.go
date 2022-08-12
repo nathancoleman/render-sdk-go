@@ -85,10 +85,10 @@ func (s *Services) List(ctx context.Context) ([]Service, error) {
 	return services, nil
 }
 
-// Retrieve returns the service with the provided serviceID.
+// Get returns the service with the provided serviceID.
 //
 // https://api-docs.render.com/reference/get-service
-func (s *Services) Retrieve(ctx context.Context, serviceID string) (*Service, error) {
+func (s *Services) Get(ctx context.Context, serviceID string) (*Service, error) {
 	resp, err := s.client.c.GetServiceWithResponse(ctx, serviceID)
 	if err != nil {
 		return nil, err

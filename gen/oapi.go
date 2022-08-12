@@ -16,6 +16,35 @@ import (
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
 )
 
+// Defines values for DeployStatus.
+const (
+	BuildFailed      DeployStatus = "build_failed"
+	BuildInProgress  DeployStatus = "build_in_progress"
+	Canceled         DeployStatus = "canceled"
+	Created          DeployStatus = "created"
+	Deactivated      DeployStatus = "deactivated"
+	Live             DeployStatus = "live"
+	UpdateFailed     DeployStatus = "update_failed"
+	UpdateInProgress DeployStatus = "update_in_progress"
+)
+
+// Deploy defines model for Deploy.
+type Deploy struct {
+	Commit *struct {
+		CreatedAt time.Time `json:"createdAt"`
+		Id        string    `json:"id"`
+		Message   string    `json:"message"`
+	} `json:"commit,omitempty"`
+	CreatedAt  *time.Time    `json:"createdAt,omitempty"`
+	FinishedAt *time.Time    `json:"finishedAt,omitempty"`
+	Id         string        `json:"id"`
+	Status     *DeployStatus `json:"status,omitempty"`
+	UpdatedAt  *time.Time    `json:"updatedAt,omitempty"`
+}
+
+// DeployStatus defines model for Deploy.Status.
+type DeployStatus string
+
 // Service defines model for Service.
 type Service struct {
 	AutoDeploy string    `json:"autoDeploy"`
@@ -106,6 +135,12 @@ type ClientInterface interface {
 
 	// GetService request
 	GetService(ctx context.Context, serviceId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListDeploys request
+	ListDeploys(ctx context.Context, serviceId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetDeploy request
+	GetDeploy(ctx context.Context, serviceId string, deployId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 func (c *Client) ListServices(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -122,6 +157,30 @@ func (c *Client) ListServices(ctx context.Context, reqEditors ...RequestEditorFn
 
 func (c *Client) GetService(ctx context.Context, serviceId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetServiceRequest(c.Server, serviceId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListDeploys(ctx context.Context, serviceId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListDeploysRequest(c.Server, serviceId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetDeploy(ctx context.Context, serviceId string, deployId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetDeployRequest(c.Server, serviceId, deployId)
 	if err != nil {
 		return nil, err
 	}
@@ -193,6 +252,81 @@ func NewGetServiceRequest(server string, serviceId string) (*http.Request, error
 	return req, nil
 }
 
+// NewListDeploysRequest generates requests for ListDeploys
+func NewListDeploysRequest(server string, serviceId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "serviceId", runtime.ParamLocationPath, serviceId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/services/%s/deploys", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetDeployRequest generates requests for GetDeploy
+func NewGetDeployRequest(server string, serviceId string, deployId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "serviceId", runtime.ParamLocationPath, serviceId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "deployId", runtime.ParamLocationPath, deployId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/services/%s/deploys/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -241,6 +375,12 @@ type ClientWithResponsesInterface interface {
 
 	// GetService request
 	GetServiceWithResponse(ctx context.Context, serviceId string, reqEditors ...RequestEditorFn) (*GetServiceResponse, error)
+
+	// ListDeploys request
+	ListDeploysWithResponse(ctx context.Context, serviceId string, reqEditors ...RequestEditorFn) (*ListDeploysResponse, error)
+
+	// GetDeploy request
+	GetDeployWithResponse(ctx context.Context, serviceId string, deployId string, reqEditors ...RequestEditorFn) (*GetDeployResponse, error)
 }
 
 type ListServicesResponse struct {
@@ -289,6 +429,52 @@ func (r GetServiceResponse) StatusCode() int {
 	return 0
 }
 
+type ListDeploysResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *[]struct {
+		Deploy Deploy `json:"deploy"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r ListDeploysResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListDeploysResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetDeployResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *Deploy
+}
+
+// Status returns HTTPResponse.Status
+func (r GetDeployResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetDeployResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 // ListServicesWithResponse request returning *ListServicesResponse
 func (c *ClientWithResponses) ListServicesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListServicesResponse, error) {
 	rsp, err := c.ListServices(ctx, reqEditors...)
@@ -305,6 +491,24 @@ func (c *ClientWithResponses) GetServiceWithResponse(ctx context.Context, servic
 		return nil, err
 	}
 	return ParseGetServiceResponse(rsp)
+}
+
+// ListDeploysWithResponse request returning *ListDeploysResponse
+func (c *ClientWithResponses) ListDeploysWithResponse(ctx context.Context, serviceId string, reqEditors ...RequestEditorFn) (*ListDeploysResponse, error) {
+	rsp, err := c.ListDeploys(ctx, serviceId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListDeploysResponse(rsp)
+}
+
+// GetDeployWithResponse request returning *GetDeployResponse
+func (c *ClientWithResponses) GetDeployWithResponse(ctx context.Context, serviceId string, deployId string, reqEditors ...RequestEditorFn) (*GetDeployResponse, error) {
+	rsp, err := c.GetDeploy(ctx, serviceId, deployId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetDeployResponse(rsp)
 }
 
 // ParseListServicesResponse parses an HTTP response from a ListServicesWithResponse call
@@ -351,6 +555,60 @@ func ParseGetServiceResponse(rsp *http.Response) (*GetServiceResponse, error) {
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest Service
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListDeploysResponse parses an HTTP response from a ListDeploysWithResponse call
+func ParseListDeploysResponse(rsp *http.Response) (*ListDeploysResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListDeploysResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []struct {
+			Deploy Deploy `json:"deploy"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetDeployResponse parses an HTTP response from a GetDeployWithResponse call
+func ParseGetDeployResponse(rsp *http.Response) (*GetDeployResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetDeployResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Deploy
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

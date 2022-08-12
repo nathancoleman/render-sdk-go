@@ -90,3 +90,7 @@ func (c *Client) DoRequest(req *http.Request) (*http.Response, error) {
 func (c *Client) Services() *Services {
 	return NewServices(c)
 }
+
+func (c *Client) Deploys(serviceID string) *Deploys {
+	return NewDeploys(c, serviceID)
+}

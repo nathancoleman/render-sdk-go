@@ -16,7 +16,7 @@ func TestServices_List(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, service := range services {
-		retrieved, err := c.Services().Retrieve(context.TODO(), service.ID)
+		retrieved, err := c.Services().Get(context.TODO(), service.ID)
 		require.NoError(t, err)
 		fmt.Println(retrieved)
 	}
